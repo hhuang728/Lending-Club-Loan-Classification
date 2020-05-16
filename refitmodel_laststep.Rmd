@@ -1,12 +1,3 @@
----
-title: "Stat652_Project_refit data and apply for 2015 data"
-author: "Hui Huang Netid:hy9489"
-date: "3/11/2020"
-output:
-  pdf_document: default
-  html_document: default
----
-
 ## Refit best model with all 2012-2014 data and then use this model to classify all of the 2015 data.
 ```{r}
 #refit random forest with all 2012-2014 data
