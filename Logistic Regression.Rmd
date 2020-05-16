@@ -1,0 +1,61 @@
+---
+title: "Stat652_Project_Logistic Regression"
+author: "Hui Huang Netid:hy9489"
+date: "2/26/2020"
+output: html_document
+---
+
+## step 3– training a model on the data
+```{r}
+loan_logistic <- glm(loan_status~loan_amnt+funded_amnt+term+int_rate+installment+home_ownership+annual_inc+verification_status+open_acc+total_pymnt, family = binomial(link = 'logit'), data = loan_train)
+summary(loan_logistic)
+anova(loan_logistic,test = 'Chisq')
+```
+
+## Step 4 – evaluating model performance
+```{r}
+loan_logistic_pred <- predict(loan_logistic,newdata = loan_test,type = 'response')
+loan_logistic_pred <- ifelse(loan_logistic_pred > 0.5,1,0)
+misClassicError <- mean(loan_logistic_pred != loan_test$loan_status,na.rm = TRUE)
+library(gmodels)
+CrossTable(loan_logistic_pred,loan_test$loan_status,prop.chisq = FALSE)
+Accuracy <- 1 - misClassicError
+Accuracy
+
+# ROC
+library(ROCR)
+pr_logistic <- prediction(loan_logistic_pred, loan_test$loan_status)
+prf.logistic <- performance(pr_logistic, measure = "tpr", x.measure = "fpr")
+plot(prf.logistic)
+auc <- performance(pr_logistic, measure = "auc")
+auc.logistic <- auc@y.values[[1]]
+auc.logistic
+```
+
+## Step 5 - Improve model performance
+```{r}
+#drop insignificant predictor ,alpha = 0.01
+loan_logistic <- glm(loan_status~funded_amnt+term+int_rate+annual_inc+verification_status+open_acc+total_pymnt, family = binomial(link = 'logit'), data = loan_train)
+summary(loan_logistic)
+anova(loan_logistic,test = 'Chisq')
+```
+```{r}
+#Evaluate the model performance
+loan_logistic_pred <- predict(loan_logistic,newdata = loan_test,type = 'response')
+loan_logistic_pred <- ifelse(loan_logistic_pred > 0.5,1,0)
+misClassicError <- mean(loan_logistic_pred != loan_test$loan_status,na.rm = TRUE)
+library(gmodels)
+CrossTable(loan_logistic_pred,loan_test$loan_status,prop.chisq = FALSE)
+Accuracy <- 1 - misClassicError
+Accuracy
+
+# ROC
+library(ROCR)
+pr_logistic <- prediction(loan_logistic_pred, loan_test$loan_status)
+prf.logistic <- performance(pr_logistic, measure = "tpr", x.measure = "fpr")
+plot(prf.logistic)
+auc <- performance(pr_logistic, measure = "auc")
+auc.logistic <- auc@y.values[[1]]
+auc.logistic
+```
+
