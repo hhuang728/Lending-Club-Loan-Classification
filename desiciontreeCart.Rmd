@@ -1,0 +1,86 @@
+---
+title: "Stat652_project_Desicion Tree CART"
+author: "Hui Huang Netid:hy9489"
+date: "2/29/2020"
+output: html_document
+---
+
+## Step 2 – Prepare the data
+```{r}
+KNNdata
+
+cart_train <- KNNdata[KNN_indx,]
+cart_test <- KNNdata[-KNN_indx,]
+dim(cart_train)
+dim(cart_test)
+
+cart_train_labels <- KNNdata[KNN_indx,1,drop = TRUE]
+cart_test_labels <- KNNdata[-KNN_indx,1,drop = TRUE]
+length(cart_train_labels)
+length(cart_test_labels)
+```
+
+## Step 3 – training a model on the data
+```{r}
+library(rpart)
+
+# regression tree using rpart
+m.rpart <- rpart(loan_status ~ loan_amnt+funded_amnt+term+int_rate+installment+home_ownership+annual_inc+verification_status+open_acc+total_pymnt, data = cart_train)
+# get the information about the tree
+m.rpart
+
+```
+```{r}
+#plot the desicion tree
+library(rpart.plot)
+#a basic desicion tree
+rpart.plot(m.rpart,digits = 3)
+```
+
+## Step 4 – evaluating model performance
+```{r}
+p.rpart <- predict(m.rpart,cart_test,type = 'class')
+table_mat <- table(cart_test$loan_status,p.rpart)
+table_mat
+
+Cart_Accuracy <- sum(diag(table_mat))/sum(table_mat)
+print(paste('Accuracy for CART', Cart_Accuracy))
+
+# ROC
+library(ROCR)
+cart_logistic <- prediction(p.rpart, cart_test$loan_status)
+cart.logistic <- performance(cart_logistic, measure = "tpr", x.measure = "fpr")
+plot(cart.logistic)
+auc <- performance(cart_logistic, measure = "auc")
+auc.cart <- auc@y.values[[1]]
+auc.cart
+```
+
+## Step 5 - Improve model performance
+```{r}
+#write a function to display accuracy
+accuracy_tune <- function(fit) {
+    p.rpart <- predict(m.rpart, cart_test, type = 'class')
+    table_mat <- table(cart_test$loan_status,p.rpart)
+    accuracy_Test <- sum(diag(table_mat)) / sum(table_mat)
+    accuracy_Test
+}
+#Tuning
+control <- rpart.control(minsplit = 4,
+    minbucket = round(5 / 3),
+    maxdepth = 3,
+    cp = 0)
+m.rpart <- rpart(loan_status ~ loan_amnt+funded_amnt+term+int_rate+installment+home_ownership+annual_inc+verification_status+open_acc+total_pymnt, data = cart_train, method = 'class', control = control)
+accuracy_tune(tune_fit)
+
+
+#ROC
+library(ROCR)
+cart_logistic <- prediction(p.rpart, cart_test$loan_status)
+cart.logistic <- performance(cart_logistic, measure = "tpr", x.measure = "fpr")
+plot(cart.logistic)
+auc <- performance(cart_logistic, measure = "auc")
+auc.cart <- auc@y.values[[1]]
+auc.cart
+```
+
