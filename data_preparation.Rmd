@@ -1,0 +1,101 @@
+---
+title: "Stat652_Project_data preparation"
+author: "Hui Huang Netid:hy9489"
+date: "2/19/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+## Step 2 - Collect data 
+```{r}
+library(pacman)
+p_load(tidyverse,Amelia,lubridate,forcats)
+#accepted_2007_to_2018Q4 <- read.csv('/Users/hhuang/Desktop/2020 Spring/Stat 652/project/Huang_Hui_Stat652_project/Huang_Hui_Stat652_Project/lending-club/accepted_2007_to_2018q4.csv/accepted_2007_to_2018Q4.csv',stringsAsFactors = TRUE)
+
+#saveRDS(accepted_2007_to_2018Q4, file = "./data/loanfull.rds")
+loan_full <- readRDS("./data/loanfull.rds")
+#subset data 2012-2014
+accepted_2012_to_2014 <- loan_full %>%
+  mutate(year = substring(issue_d,5,8))
+
+accepted_2012_to_2014 <- accepted_2012_to_2014 %>%
+  filter(year == '2012'| year == '2013'| year == '2014')
+
+#Make a table of the variable names
+table(names(accepted_2012_to_2014))
+
+# Make a table of the number of rows and columns in the dataframe
+dim(accepted_2012_to_2014)
+```
+
+## Step 2 – exploring and preparing the data
+```{r}
+#check the missing value
+#missmap(accepted_2012_to_2014,main = "Missing values vs observed")
+#number of missing values in each column
+sapply(accepted_2012_to_2014, function(x) sum(is.na(x)))
+#number of unique values in each column
+sapply(accepted_2012_to_2014, function(x) length(unique(x)))
+
+#filter the needed varibles and produce.
+accdata2012_2014 <- accepted_2012_to_2014%>%
+  filter(loan_status == "Fully Paid" | loan_status =="Charged Off")
+
+#deal with missing values
+library(forcats)
+accdata2012_2014$loan_status <- fct_drop(accdata2012_2014$loan_status)
+table(accdata2012_2014$loan_status)
+count(accdata2012_2014 ) #n = 411273
+accdata2012_2014 %>%
+  select(everything()) %>%
+  summarise_all(funs(sum(is.na(.))/411273))
+#remove the column with NA percentage larger than 0.5
+accdata2012_2014 <- accdata2012_2014[, colMeans(is.na(accdata2012_2014)) < 0.5]
+accdata2012_2014 %>%
+  select(everything()) %>% 
+  summarise_all(funs(sum(is.na(.))/411273))
+head(accdata2012_2014)
+tail(accdata2012_2014)
+str(accdata2012_2014)
+
+#remove some unrelated columns
+accdata2012_2014 <- accdata2012_2014 %>% select(-id, -grade, -zip_code, -addr_state, -earliest_cr_line, -revol_util, -last_pymnt_d, -last_credit_pull_d, -debt_settlement_flag_date, -emp_title, -desc, -title, -out_prncp, -out_prncp_inv, -next_pymnt_d, -pymnt_plan, -policy_code, -application_type, -hardship_flag, -disbursement_method, -settlement_date)
+
+dim(accdata2012_2014)
+str(accdata2012_2014)
+
+#accdata <- accepted_2012_to_2014 %>%
+  #select(funded_amnt,emp_length,annual_inc,home_ownership,grade,
+            #last_pymnt_amnt, mort_acc, pub_rec, int_rate, open_acc,num_actv_rev_tl,
+            #mo_sin_rcnt_rev_tl_op,mo_sin_old_rev_tl_op,bc_util,bc_open_to_buy,
+            #avg_cur_bal,acc_open_past_24mths,loan_status)
+
+#check missing value again
+#missmap(accdata2012_2014,main = 'Missing values vs observed') #till now we have 2% missing value with 87 varibales
+#number of missing values in each column
+sapply(accdata2012_2014, function(x) sum(is.na(x)))
+#number of unique values in each column
+sapply(accdata2012_2014, function(x) length(unique(x)))
+
+accdata2012_2014_nona <- accdata2012_2014 %>%
+  na.omit()
+
+#change the loan_status to 0,1.
+accdata2012_2014_nona$loan_status <- as.numeric(accdata2012_2014_nona$loan_status)
+accdata2012_2014_nona$loan_status <- accdata2012_2014_nona$loan_status - 1
+
+accdata2012_2014_nona$loan_status
+typeof(accdata2012_2014_nona$loan_status)
+#Create Training and Testing datasets. Use a 75-25 split
+set.seed(999)
+indx <- sample(1:nrow(accdata2012_2014_nona), as.integer(0.75*nrow(accdata2012_2014_nona)))
+loan_train <- accdata2012_2014_nona[indx,]
+loan_test <- accdata2012_2014_nona[-indx,]
+nrow(loan_train)
+nrow(loan_test)
+
+
+```
+
