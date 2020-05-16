@@ -1,0 +1,59 @@
+---
+title: "Stat652_Project_refit data and apply for 2015 data"
+author: "Hui Huang Netid:hy9489"
+date: "3/11/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Refit best model with all 2012-2014 data and then use this model to classify all of the 2015 data.
+```{r}
+#refit random forest with all 2012-2014 data
+library(randomForest)
+library(gmodels)
+str(rfdata)
+ranf_model <- randomForest(loan_status ~ . , data = rfdata, ntree = 201, mtry = 5)
+summary(ranf_model)
+varImpPlot(ranf_model)
+```
+
+```{r}
+#prepare 2015 data
+data_2015 <- loan_full %>%
+  mutate(year = substring(issue_d,5,8)) %>%
+  filter(year == '2015') 
+data_2015_new <- data_2015 %>%
+  filter(loan_status == "Fully Paid" | loan_status == "Charged Off")  %>%
+  droplevels
+str(data_2015_new)
+
+
+rfdata_2015 <- data_2015_new %>%
+  select(loan_status,loan_amnt,funded_amnt,term,int_rate,installment,home_ownership,annual_inc,verification_status,open_acc,total_pymnt) %>%
+  na.omit()
+str(rfdata_2015)
+
+  
+sapply(rfdata_2015, function(x) length(unique(x)))
+sapply(rfdata_2015,function(x) sum(is.na(x)))
+
+#Evaluate model with 2015 data
+ranf_pred <- predict(ranf_model, rfdata_2015)
+ranf_pred
+CrossTable(ranf_pred, rfdata_2015$loan_status, prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+levels(rfdata_2015$loan_status)
+misClasificError <- mean(ranf_pred != rfdata_2015$loan_status,na.rm = TRUE)
+print(paste('Accuracy',1-misClasificError))
+
+# ROC
+library(ROCR)
+pr_ranf_2015 <- prediction(as.numeric(ranf_pred), as.numeric(rfdata_2015$loan_status))
+prf.ranf_2015 <- performance(pr_ranf_2015, measure = "tpr", x.measure = "fpr")
+plot(prf.ranf_2015)
+auc <- performance(pr_ranf_2015, measure = "auc")
+auc.ranf_2015 <- auc@y.values[[1]]
+auc.ranf
+  
+
+```
