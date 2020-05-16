@@ -1,0 +1,31 @@
+---
+title: "Stat652_ROC curve_comparison"
+author: "Hui Huang Netid:hy9489"
+date: "3/11/2020"
+output: html_document
+---
+
+### Compare the ROC curve for different models
+```{r}
+plot(prf.logistic, col="purple")
+par(new=TRUE)
+plot(KNN_prf, col="orange")
+par(new=TRUE)
+plot(cart.logistic, col="yellow")
+par(new=TRUE)
+plot(prf.c50, col="blue")
+par(new = TRUE)
+plot(prf.nb,col = 'pink')
+par(new = TRUE)
+plot(prf.ranf,col = 'grey')
+par(new = TRUE)
+plot(prf.ml,col = 'green')
+segments(x0=0, # Value from x (initial)
+         x1=1, # Value to x (final)
+         y0=0, # Value from y (initial)
+         y1=1, # Value to y (final)
+         col='red')
+legend('bottomright',legend = c('LogisticReg','KNN','DecisionTree','C50','NaiveBayes','RandomForest','Mlregression'),lwd = c(2.5,2.5,2.5,2.5,2.5,2.5,2.5),col = c('purple','orange','yellow','blue','pink','grey','green'))
+
+```
+
