@@ -1,10 +1,3 @@
----
-title: "Stat652_Project_Logistic Regression"
-author: "Hui Huang Netid:hy9489"
-date: "2/26/2020"
-output: html_document
----
-
 ## step 3– training a model on the data
 ```{r}
 loan_logistic <- glm(loan_status~loan_amnt+funded_amnt+term+int_rate+installment+home_ownership+annual_inc+verification_status+open_acc+total_pymnt, family = binomial(link = 'logit'), data = loan_train)
