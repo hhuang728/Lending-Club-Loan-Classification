@@ -1,0 +1,115 @@
+---
+title: "Stat652_Project_KNN"
+author: "Hui Huang Netid:hy9489"
+date: "2/28/2020"
+output: html_document
+---
+
+## step 2– Prepare the data
+```{r}
+#table of loan_status 0 is charge off 1 is fully paid
+table(accdata2012_2014_nona$loan_status)
+KNNdata <- accdata2012_2014_nona
+#Record loan status as a factor
+KNNdata$loan_status <- factor(KNNdata$loan_status, levels = c("0", "1"),labels = c("Charged Off", "Fully paid"))
+#table or proportion with more information labels
+round(prop.table(table(KNNdata$loan_status))*100,digit = 1)
+#filter out numeric data
+KNNdata_numeric <- KNNdata %>%
+  select(loan_status, loan_amnt, funded_amnt, funded_amnt_inv, installment, annual_inc, open_acc, total_pymnt,  total_pymnt_inv, tot_cur_bal, bc_util,
+         tot_hi_cred_lim, total_il_high_credit_limit)
+str(KNNdata_numeric)
+#create normalization function
+normalize <- function(x){
+  return((x - min(x))/(max(x) - min(x)))
+}
+
+#test normalization function
+normalize(c(10,20,30,40,50))
+
+#normalize the KNNdata_numeric
+KNNdata_numeric_nor <- as.data.frame(lapply(KNNdata_numeric[2:13], normalize))
+summary(KNNdata_numeric_nor$loan_amnt)
+#create train and test data sets
+
+set.seed(999)
+KNN_indx <- sample(nrow(KNNdata_numeric_nor),as.integer(0.75*nrow(KNNdata_numeric_nor)))
+
+KNN_train <- KNNdata_numeric_nor[KNN_indx,]
+KNN_test <- KNNdata_numeric_nor[-KNN_indx,]
+dim(KNN_train)
+dim(KNN_test)
+
+KNN_train_labels <- KNNdata_numeric[KNN_indx,1,drop = TRUE]
+KNN_test_lables <- KNNdata_numeric[-KNN_indx,1,drop = TRUE]
+length(KNN_train_labels)
+length(KNN_test_lables)
+```
+
+## Step 3 – training a model on the data
+```{r}
+library(class)
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  =11) #k =11 best accuracy
+head(KNN_test_predictor)
+```
+
+## Step 4 - evaluating model performance
+```{r}
+library(gmodels)
+#Create the cross tabulation of predicted vs. actual
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+```
+
+```{r}
+#ROC
+library(ROCR)
+KNN_pr <- prediction(as.numeric(KNN_test_predictor),KNN_test_lables)
+KNN_prf <- performance(KNN_pr,measure = 'tpr',x.measure = 'fpr')
+plot(KNN_prf)
+
+#AUC
+KNN_auc <- performance(KNN_pr,measure = 'auc')
+KNN_auc.knn <- auc@y.values[[1]]
+KNN_auc.knn
+```
+
+## Step 5 - Improve model performance
+```{r}
+#Try different K ---
+strt <- Sys.time()
+
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  =1)
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+
+#k = 11 gives best accuracy
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  =11)
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  =15)
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  =19)
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+
+KNN_test_predictor <- knn(train = KNN_train,test = KNN_test,cl = KNN_train_labels, k  = 29)
+CrossTable(x = KNN_test_lables, y = KNN_test_predictor,prop.chisq = FALSE)
+KNNmisClassicError <- mean(KNN_test_predictor != KNN_test_lables,na.rm = TRUE)
+print(paste('Accuracy',1 - KNNmisClassicError))
+
+#end tiem
+print(Sys.time() - strt)
+```
+
+
+
