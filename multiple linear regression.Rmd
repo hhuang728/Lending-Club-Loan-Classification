@@ -1,0 +1,74 @@
+---
+title: "Stat652_project_multiple linear regression"
+author: "Hui Huang Netid:hy9489"
+date: "3/10/2020"
+output: html_document
+---
+
+## Step 2 - Prepare the data
+```{r}
+library(tidyverse)
+mldata <- accdata2012_2014_nona %>%
+  select(loan_status,loan_amnt,funded_amnt,term,int_rate,installment,home_ownership,annual_inc,verification_status,open_acc,total_pymnt)
+  
+str(mldata)
+set.seed(999)
+indx <- sample(1:nrow(mldata),as.integer(0.75*nrow(mldata)))
+mldata_train <- mldata[indx,]
+mldata_test <- mldata[-indx,]
+
+dim(mldata_train)
+dim(mldata_test)
+
+```
+
+## Step 3 – training a model on the data
+```{r}
+library(randomForest)
+library(gmodels)
+ml_model <- lm(loan_status ~ . , data = mldata_train)
+summary(ml_model)
+
+```
+
+## Step 4 – evaluating model performance
+```{r}
+ml_pred <- predict(ml_model, mldata_test)
+summary(ml_pred)
+list(ml_model = broom::glance(ml_model))
+
+ml_pred <- ifelse(ml_pred > 0.5,1,0)
+CrossTable(ml_pred, mldata_test$loan_status, prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+misClasificError <- mean(ml_pred != mldata_test$loan_status,na.rm = TRUE)
+print(paste('Accuracy',1-misClasificError))
+```
+
+
+## Step 5 - Improve model performance
+```{r}
+#remove non significant varibles
+ml_model <- lm(loan_status ~ funded_amnt+term+int_rate+installment+annual_inc+verification_status+open_acc+
+               total_pymnt , data = mldata_train)
+summary(ml_model)
+
+#evaluate model performance
+ml_pred <- predict(ml_model, mldata_test)
+summary(ml_pred)
+list(ml_model = broom::glance(ml_model))
+
+ml_pred <- ifelse(ml_pred > 0.5,1,0)
+CrossTable(ml_pred, mldata_test$loan_status, prop.chisq = FALSE, prop.t = FALSE, prop.r = FALSE, dnn = c('predicted', 'actual'))
+misClasificError <- mean(ml_pred != mldata_test$loan_status,na.rm = TRUE)
+print(paste('Accuracy',1-misClasificError))
+
+# ROC
+library(ROCR)
+pr_ml <- prediction(ml_pred, mldata_test$loan_status)
+prf.ml <- performance(pr_ml, measure = "tpr", x.measure = "fpr")
+plot(prf.ml)
+auc <- performance(pr_ml, measure = "auc")
+auc.ml <- auc@y.values[[1]]
+auc.ml
+```
+
+
