@@ -1,0 +1,99 @@
+---
+title: "Stat652_Project_C5.0 Decision Tree"
+author: "Hui Huang Netid:hy9489"
+date: "2/29/2020"
+output: html_document
+---
+
+## Step 2 - Prepare the data
+```{r}
+C5data <- KNNdata %>%
+  select(loan_amnt,funded_amnt,term,int_rate,installment,home_ownership,annual_inc,verification_status,open_acc,total_pymnt,loan_status)
+str(C5data)
+levels(C5data$term)[1] = "missing"
+levels(C5data$home_ownership)[1] = "missing"
+levels(C5data$verification_status)[1] = "missing"
+
+
+sapply(C5data, function(x) sum(is.na(x)))
+
+C5data$loan_status <- fct_drop(C5data$loan_status)
+
+C5_indx <- sample(nrow(C5data),as.integer(0.75*nrow(C5data)))
+C5_train <- C5data[C5_indx,]
+str(C5_train)
+C5_test <- C5data[-C5_indx,]
+dim(C5_train)
+dim(C5_test)
+
+C5_train_labels <- C5data[C5_indx,1,drop = TRUE]
+C5_test_labels <- C5data[-C5_indx,1,drop = TRUE]
+length(C5_train_labels)
+length(C5_test_labels)
+
+#check the proportion of class varibale
+prop.table(table(C5_train$loan_status))
+prop.table(table(C5_test$loan_status))
+```
+
+## Step 3 - Training a model on the data
+```
+library(C50)
+#build the simplest decision tree
+
+C5_mod <- C5.0(C5_train[-11],C5_train$loan_status)
+C5_mod
+summary(C5_mod)
+```
+## Step 4 – evaluating model performance
+```{r}
+# create a factor vector of predictions on test data
+C5.0_pred <- predict(C5_mod,newdata = C5_test)
+# cross tabulation of predicted versus actual classes
+library(gmodels)
+CrossTable(C5_test$loan_status, C5.0_pred,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual default', 'predicted default'))
+misClasificError <- mean(C5.0_pred != C5_test$loan_status)
+print(paste('Accuracy',1-misClasificError))
+
+#ROC
+library(ROCR)
+pr_c50 <- prediction(as.numeric(C5.0_pred),C5_test$loan_status)
+prf.c50 <- performance(pr_c50, measure = "tpr", x.measure = "fpr")
+plot(prf.c50)
+#AUC
+auc <- performance(pr_c50,measure = 'auc')
+auc.c50 <- auc@y.values[[1]]
+auc.c50
+```
+
+## Step 5 - Improve model performance
+```{r}
+## Boosting the accuracy of decision trees
+# boosted decision tree with 10 trials
+C5_boost <- C5.0(C5_train[-11],C5_train$loan_status,trials = 10)
+summary(C5_boost)
+# create a factor vector of predictions on test data
+C5boost_pred <- predict(C5_boost,newdata = C5_test)
+# cross tabulation of predicted versus actual classes
+
+CrossTable(C5_test$loan_status, C5boost_pred,
+           prop.chisq = FALSE, prop.c = FALSE, prop.r = FALSE,
+           dnn = c('actual default', 'predicted default'))
+
+misClasificError <- mean(C5boost_pred != C5_test$loan_status)
+print(paste('Accuracy',1-misClasificError))
+
+#ROC
+library(ROCR)
+pr_c50 <- prediction(as.numeric(C5.0_pred),C5_test$loan_status)
+prf.c50 <- performance(pr_c50, measure = "tpr", x.measure = "fpr")
+plot(prf.c50)
+#AUC
+auc <- performance(pr_c50,measure = 'auc')
+auc.c50 <- auc@y.values[[1]]
+auc.c50
+```
+
+
